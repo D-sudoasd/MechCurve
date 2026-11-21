@@ -88,7 +88,9 @@
     "tensile-c.csv": {
       "sample": "Tensile C",
       "history": "tension",
-      "fractured": true
+      "fractured": true,
+      "original_gauge_mm": 30,
+      "final_gauge_mm": 30.87
     }
   }
 }

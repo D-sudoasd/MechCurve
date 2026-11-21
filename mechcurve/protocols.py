@@ -33,8 +33,8 @@ HINTS = {
     "fatigue": r"fatigue|疲劳",
     "indentation": r"indentation|压入|压痕",
     "peel": r"peel|剥离",
-    "tension": r"tensile|tension|拉伸",
-    "cyclic": r"cyclic|循环加载",
+    "tension": r"tensile|tension|拉伸|拉断",
+    "cyclic": r"cyclic|循环加载|循环拉伸",
 }
 # Priority-ordered coordinate pairs. A time series alone never establishes the method.
 DISP = ("extension_mm", "strain_pct")
@@ -137,6 +137,14 @@ def classify(record, channels, labels, points, meta, opts):
             return "creep", "constant_control"
         if whole_hold(points, "strain_pct", "stress_MPa"):
             return "relaxation", "constant_control"
+    if "gauge_extension_mm" in channels and set(LOAD).intersection(channels):
+        return "axial", "axial_channels"
+    if (
+        re.search(r"tensile|拉伸", headers, re.I)
+        and set(LOAD).intersection(channels)
+        and set(DISP).intersection(channels)
+    ):
+        return "axial", "channel_names"
     if {"stress_MPa", "strain_pct"} <= set(channels):
         strain = [p["strain_pct"] for p in points if p["strain_pct"] is not None]
         stress = [p["stress_MPa"] for p in points if p["stress_MPa"] is not None]
@@ -217,7 +225,7 @@ def record_analysis(desc, meta, opts):
         mode in ("axial", "tension", "cyclic")
         and not (
             set(LOAD).intersection(channels)
-            and set((*DISP, "time_s")).intersection(channels)
+            and set((*DISP, "gauge_extension_mm", "time_s")).intersection(channels)
         )
         and not (opts.get("test_type") or opts.get("history"))
     ):
@@ -229,7 +237,7 @@ def record_analysis(desc, meta, opts):
             )
         if not set(LOAD).intersection(channels):
             raise ValueError("Axial response requires force or stress")
-        if not set((*DISP, "time_s")).intersection(channels):
+        if not set((*DISP, "gauge_extension_mm", "time_s")).intersection(channels):
             raise ValueError("Axial response requires strain, displacement or time")
         if selected:
             raise ValueError(
@@ -238,16 +246,54 @@ def record_analysis(desc, meta, opts):
         axial_opts = dict(opts)
         if mode in ("tension", "cyclic"):
             axial_opts["history"] = mode
-        # Instrument exports may carry unrelated numeric channels. Preserve those in
-        # the source file and keep the established axial point/evidence schema.
-        pts = [{k: p[k] for k in (*AXIAL, "source_row")} for p in points]
-        result = analyze_record(
-            pts, [k for k in channels if k in AXIAL], meta, axial_opts
-        )
+        axial_channels = [k for k in channels if k in AXIAL]
+        derivation = {}
+        if "gauge_extension_mm" in channels:
+            if "extension_mm" not in channels:
+                for p in points:
+                    p["extension_mm"] = p["gauge_extension_mm"]
+                axial_channels.append("extension_mm")
+                derivation["extension_source"] = "gauge_extension_mm"
+            if (
+                "strain_pct" not in channels
+                and opts.get("original_gauge_mm") is not None
+            ):
+                gauge = positive(opts, "original_gauge_mm")
+                for p in points:
+                    delta = p["gauge_extension_mm"]
+                    p["strain_pct"] = 100 * delta / gauge if delta is not None else None
+                axial_channels.append("strain_pct")
+                derivation.update(
+                    strain_source="gauge_extension_mm", original_gauge_mm=gauge
+                )
+        geometry = opts.get("geometry", {})
+        area = opts.get("area_mm2", meta.get("area_mm2"))
+        if (
+            area is None
+            and geometry.get("fixture") == "solid_circular"
+            and geometry.get("diameter_mm") is not None
+        ):
+            area = math.pi * positive(geometry, "diameter_mm") ** 2 / 4
+        if (
+            area is None
+            and geometry.get("fixture") == "rectangular_section"
+            and all(geometry.get(k) is not None for k in ("width_mm", "thickness_mm"))
+        ):
+            area = positive(geometry, "width_mm") * positive(geometry, "thickness_mm")
+        if area is not None:
+            axial_opts["area_mm2"] = area
+            if "stress_MPa" not in channels and "force_N" in channels:
+                derivation.update(stress_source="force_N", area_mm2=area)
+        keys = [*AXIAL, "source_row"]
+        if "gauge_extension_mm" in channels:
+            keys.append("gauge_extension_mm")
+        pts = [{k: p[k] for k in keys} for p in points]
+        result = analyze_record(pts, axial_channels, meta, axial_opts)
         return {
             **result,
             "test_type": result["history"],
             "classification": basis,
+            "axial_derivation": derivation,
             "source_columns": labels,
         }
     if (

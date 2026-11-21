@@ -267,7 +267,9 @@ def trace_axes(ax, record, max_cycle, markers, axes_keys=None):
     plot_axis(ax, xlabel, ylabel)
     idx = {p["source_row"]: i for i, p in enumerate(ps)}
     if not cs:
-        for _, block in note_segments(ps):
+        for phase, block in note_segments(ps):
+            if phase in ("after_event", "low_load_excursion", "unclassified"):
+                continue
             ax.plot(
                 axes_values(block, xkey), axes_values(block, ykey), lw=1.6, color=ACCENT
             )
@@ -714,6 +716,8 @@ def history_figure(fig, ax, records, colorbar_bounds):
             frameon=False,
             fontsize=8,
         )
+
+    return axes_keys
 
 
 def merged_figure(destination, name, records):

@@ -1,72 +1,76 @@
 # MechCurve
 
-[简体中文](README.zh-CN.md) · [Specimen sheets (PDF)](assets/showcase/specimen-sheets.en.pdf) · [Methods](docs/methods.md) · [Illustrated gallery](docs/gallery.md)
+**Cyclic loading and tensile fracture, one page per specimen.** Give a local agent an instrument export. MechCurve follows the loading history, measures how much strain returns after each unload, and links the yield point, stress maximum and terminal load drop to the original observations.
 
-<img src="assets/gallery/01-cover-preview.webp" alt="Concept illustration of a tensile coupon held between aligned wedge grips" width="100%">
+[简体中文](README.zh-CN.md) · [Open the three specimen sheets](assets/showcase/specimen-sheets.en.pdf) · [Run the demo](#run-the-demo) · [Agent setup](docs/agent.md)
 
-**One physical specimen, one performance sheet.** Give a local agent a folder of tensile or cyclic-loading exports. MechCurve finds the measured reversals, fits the first-loading modulus, and writes a printable PDF with the stress–strain history, recovery scatter and cycle metrics. Each reported event points back to its acquisition and original CSV row.
+<img src="assets/gallery/axial-bench.webp" width="100%" alt="Conceptual laboratory photograph of an intact tensile coupon and the two halves of a fractured specimen">
 
-### Beyond axial testing
+## How far did the specimen recover?
 
-Give an agent one acquisition file or a mixed folder of CSV, TSV, TXT and Excel workbooks. MechCurve also handles compression, flexure, shear, torsion, creep, relaxation, fatigue, indentation and peel. Each specimen sheet reports quantities appropriate to its method, from a first-loading compression modulus to a measured hold rate. Other instrument curves can retain their native coordinates and an explicitly selected fit interval.
+**Cyclic A** reaches 1.650% applied strain on cycle 4 and returns to a residual of 0.028 percentage points at its measured unload stress. Cycle 5 reaches 2.050% and leaves 0.061 points. At the chosen **residual < 0.030 pp** criterion, cycle 4 is the highest observed qualifying cycle. Its first-loading tensile modulus is **52.00 GPa**, fitted from 0.05% to 0.15% strain increment.
 
-<img src="assets/showcase/protocol-overview.webp" width="100%" alt="Four software-generated examples showing beam flexure, torque–twist, a creep hold and a fatigue waveform">
+[![Successive stress–strain loops beside measured residual strain, with cycles 4 and 5 annotated against the cutoff](assets/showcase/guide-cycles.png)](assets/showcase/cyclic-detail.en.pdf)
 
-[Open the twelve-page protocol example](assets/showcase/protocol-sheets.en.pdf) · [Supported methods, units and assumptions](docs/protocols.md) · [Mixed campaign inputs](examples/protocols)
+The PDF keeps the specimen's first loading, resumed acquisitions and repeated targets together. **Resumed B** visited the same 1.3% target twice. Its measured peak stresses were 636.56 and 642.85 MPa. Both visits retain their own unload rows and segment references. Suspected trial acquisitions remain available in the detailed outputs. [Resumed-history figure](assets/showcase/resumed-history.pdf) · [Cycle and recovery methods](docs/methods.md)
 
-### See what the software produces
+## Where did the tensile test end?
 
-<img src="assets/showcase/sheet-overview.webp" alt="Actual software output for synthetic Cyclic A, Resumed B and Tensile C, one page per specimen" width="100%">
+**Tensile C** reaches 399.85 MPa at 3.000% strain on row 302. Loading continues along a softening branch. The last observation before the sharp drop is row 347 at 327.85 MPa and 3.450% strain. By row 350 the force has fallen 90.2%. The synthetic experimenter's note independently confirms the break.
 
-The bundled campaign contains three synthetic specimens. **Cyclic A** returns 52.00 GPa from its first loading branch. At 1.65% applied strain the residual is 0.028 percentage points. At 2.05% it is 0.061. The sheet therefore highlights **1.650%** as the highest observed applied strain meeting the 0.03-point criterion. **Resumed B** retains two acquisitions and both visits to the same target on one page. **Tensile C** carries an explicit synthetic fracture note and a source-row-linked load drop.
+[![Tensile curve showing the proof point and peak stress beside the terminal load interval from row 347 to row 350](assets/showcase/guide-fracture.png)](assets/showcase/tensile-detail.en.pdf)
 
-[Open all three specimen pages](assets/showcase/specimen-sheets.en.pdf) · [Read the campaign report](assets/showcase/campaign-report.en.pdf) · [Inspect six software-generated figures](docs/gallery.md#software-output)
+A curve-only drop stays a candidate. A test can also end under load without a located break. The report distinguishes the **pre-event extensometer strain** from **post-break gauge elongation** (2.900% here). The latter uses the measured gauge lengths on a confirmed fractured specimen. [Read the tensile specimen report](assets/showcase/tensile-detail.en.pdf) · [Inspect the source CSV](examples/demo/tensile-c.csv)
 
-### Run the demo
+## Read the three specimen sheets
 
-Python 3.11 or later. From a clone of this repository:
+[![Printable sheets for Cyclic A, Resumed B and Tensile C with separate mechanical properties and evidence](assets/showcase/sheet-overview.webp)](assets/showcase/specimen-sheets.en.pdf)
+
+| Follow a measurement | Find in the delivery |
+| --- | --- |
+| First loading and recovery limit | Modulus fit rows, R², all ties at the highest qualifying strain and the first complete cycle outside the limit in `axial-summary.json` |
+| Work and stiffness in a loop | Loading and unloading endpoint secants, loading work, returned work and signed net work in `cycle-branches.csv` |
+| Fracture and proof stress | Status and basis, pre-drop and low-signal rows, Rp0.2 interpolation bracket and strain at peak stress |
+
+<details>
+<summary>See how branch work and endpoint secants change over the six cycles</summary>
+
+<img src="assets/showcase/guide-branches.png" width="100%" alt="Loading and returned work density, and endpoint secants for each complete synthetic cycle">
+
+Work is integrated along the measured engineering stress–strain path. A cycle with a residual endpoint is open. Its signed net work includes the effect of those differing endpoints. The first-loading modulus uses a separate linear fit. [Definitions and units](docs/methods.md)
+
+</details>
+
+## Run the demo
+
+From the repository root with Python 3.11 or later:
 
 ```sh
 python -m venv .venv
-# macOS / Linux
+# Linux / macOS
 source .venv/bin/activate
-# Windows PowerShell
-# .\.venv\Scripts\Activate.ps1
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[agent]"
-mechcurve inspect examples/demo
 mechcurve analyze examples/demo --notes examples/demo/notes.json --lang en
 ```
 
-Open **examples/demo_MechCurve/open-results.html**. The offline index links the specimen sheets, detailed reports, vector figures, CSV tables and JSON. The CLI returns the verified run path. Use it in place of `RUN_DIRECTORY` to inspect the two visits to Resumed B's 1.3% target:
+Open **examples/demo_MechCurve/open-results.html**. Replace `RUN` below with the versioned directory returned by the command:
 
 ```sh
-mechcurve cycles RUN_DIRECTORY --record resumed-b1.csv --cycle 3
-mechcurve cycles RUN_DIRECTORY --record resumed-b2.csv --cycle 4
-mechcurve verify RUN_DIRECTORY
+mechcurve summary RUN --sample "Cyclic A"
+mechcurve evidence RUN --record tensile-c.csv --row 347 --radius 3
+mechcurve verify RUN
 ```
 
-### Bring your own experiment
+A useful agent request is *“Analyze this folder, group known resumed acquisitions, give me the highest qualifying cycle for each specimen, and show the original rows supporting any fracture call.”* The stdio MCP server supports the same inspection, analysis and evidence queries. [Agent tools](docs/agent.md) · [Runnable specimen notes](examples/demo/notes.json)
 
-| You supply | MechCurve delivers |
-| --- | --- |
-| CSV with time, force or stress and available strain or extension channels | Unit-normalized points, observed peaks, load/unload phase and source rows |
-| Cyclic history with measurable unload endpoints | Cycle colors, peak-force rows, reversal rows, applied, recovered and residual strain |
-| Specimen identity and acquisition order for a resumed test | One page per specimen, continuous cycle numbers and separate measured segment references |
-| Monotonic tension and independent break evidence when available | First-loading modulus, eligible tensile metrics and a termination diagnostic |
-| A folder with preliminary acquisitions | Formal plots, retained trial rows, recorded selection reasons and optional role overrides |
+### At the test bench
 
-Call `mechcurve analyze INPUT_FOLDER --notes NOTES.json --output OUTPUT_FOLDER --lang en`. Keep output outside the source tree. Chinese reports use `--lang zh` (default) and a local CJK font. An English report can retain Chinese sample names when rendered with a CJK font. Install Noto Sans CJK SC or set `MECHCURVE_FONT` to a suitable font file. [Input and metric definitions](docs/methods.md) · [Runnable specimen notes](examples/demo/notes.json)
+| Gauge reference | Repeated target | Fracture evidence |
+| --- | --- | --- |
+| [![Concept illustration of extensometer contact points](assets/gallery/03-gauge-preview.webp)](docs/methods.md) | [![Concept illustration of a specimen at two acquisition stages](assets/gallery/09-resume-preview.webp)](assets/showcase/resumed-history.pdf) | [![Concept illustration of the separated ends of a tensile coupon](assets/gallery/10-fracture-preview.webp)](assets/showcase/terminal-event.pdf) |
+| Preserve the strain reference. | Keep both visits. | Check the terminal rows. |
 
-### Use from an agent
+The cover and laboratory illustrations are conceptual artwork. All numerical figures above come from the public synthetic CSVs. CSV, TSV, TXT and visible Excel worksheets are supported. Additional workflows cover compression, flexure, torsion, creep, relaxation, fatigue and other measured channels. [Mixed-protocol examples](assets/showcase/protocol-sheets.en.pdf) · [Protocol catalog](docs/protocols.md) · [Full gallery](docs/gallery.md)
 
-The optional stdio MCP server exposes inspection, analysis, source-row lookup, cycle lookup and delivery verification. Calculations run locally in Python. The host agent supplies any interpretation and cites the acquisition and source row. Existing run receipts support verified reuse of numerical records, segment figures, detailed reports, specimen sheets and merged histories. [MCP setup and tool calls](docs/agent.md)
-
-### Reproduce and develop
-
-```sh
-python examples/generate_demo.py
-python -m pip install -e ".[agent,test]"
-python -m pytest -q
-```
-
-The generator prescribes all public stress–strain data. The gallery includes software output and twelve original conceptual illustrations. [Gallery and artwork provenance](docs/gallery.md) · [MIT license](LICENSE)
+To regenerate the guide figures, run `python examples/render_axial_guide.py RUN OUTPUT_FOLDER` on the analyzed axial demo. Chinese reports use `--lang zh` (default) and a CJK font. [Campaign report](assets/showcase/campaign-report.en.pdf) · [MIT license](LICENSE)

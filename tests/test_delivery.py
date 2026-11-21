@@ -113,6 +113,7 @@ def test_cli_mcp_and_incremental_delivery(tmp_path, monkeypatch):
                 "analyze_directory",
                 "inspect_directory",
                 "list_protocols",
+                "summarize_axial",
                 "read_cycles",
                 "review_rows",
                 "verify_delivery",
@@ -141,6 +142,13 @@ def test_cli_mcp_and_incremental_delivery(tmp_path, monkeypatch):
             assert (await call("verify_delivery", {"run": multi["run"]}))[
                 "status"
             ] == "complete"
+            compact = await call(
+                "summarize_axial", {"run": str(run), "sample": expected["sample"]}
+            )
+            assert (
+                compact["terminal_records"][0]["before_row"]
+                == expected["event"]["source_row"]
+            )
             same = await call(
                 "analyze_directory",
                 {"input_dir": str(source), "output_dir": str(output), "notes": notes},

@@ -25,6 +25,7 @@ from . import protocol_reports as views
 from .protocols import record_analysis, TITLES
 from .index import write_index, publish_index
 from .mechanics import recovery_summary
+from .axial import specimen_axial_summary
 from time import perf_counter
 from pypdf import PdfReader, PdfWriter
 from .locale import render_context, tr, language
@@ -350,6 +351,7 @@ def _analyze(source, output, notes):
             fonts,
             runtime,
             code["figures.py"],
+            code["axial_plots.py"],
             code["locale.py"],
             code["translations.py"],
         ]
@@ -396,6 +398,7 @@ def _analyze(source, output, notes):
                     physics,
                     code["inputs.py"],
                     code["mechanics.py"],
+                    code["axial.py"],
                     code["channels.py"],
                     code["tableio.py"],
                     code["protocols.py"],
@@ -478,6 +481,8 @@ def _analyze(source, output, notes):
         moduli = []
         recovery_by_sample = {}
         profile_metrics = []
+        axial_summaries = {}
+        branch_metrics = []
         multi_protocol = len(axial) != len(analyzed)
         for name, items in groups.items():
             formal = [r for r in items if r["plot_role"] == "main"]
@@ -523,6 +528,10 @@ def _analyze(source, output, notes):
                             if p["local_cycle"]
                             else None,
                         }
+                    )
+                for b in r.get("cycle_branches", []):
+                    branch_metrics.append(
+                        {**ident, "cycle": cycle_offset + b["local_cycle"], **b}
                     )
                 cycle_offset += len(r["cycles"])
                 if "curve" in r:
@@ -614,6 +623,8 @@ def _analyze(source, output, notes):
                 recovery_by_sample[name] = recovery_summary(
                     c for r in formal for c in r["cycles"]
                 )
+            if axial_formal:
+                axial_summaries[name] = specimen_axial_summary(items)
             dest = Path("specimens" if language() == "en" else "样品") / slug(name)
             folder = stage / dest
             folder.mkdir(parents=True, exist_ok=True)
@@ -782,6 +793,14 @@ def _analyze(source, output, notes):
             ),
         ]:
             write_table(stage / tr(filename), rows, columns)
+        if axial_summaries:
+            write_json(stage / "axial-summary.json", axial_summaries)
+        if branch_metrics:
+            write_table(
+                stage / "cycle-branches.csv",
+                branch_metrics,
+                ["sample", "record", "cycle"],
+            )
         batch_start = perf_counter()
         if multi_protocol:
             waves = [
@@ -992,3 +1011,24 @@ def query(run, record, cycle=None, row=None, radius=3):
             raise ValueError("该采集段无此周次")
         return found
     return r
+
+
+def axial_summary(run, sample=None):
+    folder = Path(run)
+    saved = folder / "axial-summary.json"
+    if saved.is_file():
+        summaries = read_json(saved)
+    else:
+        groups = defaultdict(list)
+        for r in read_json(folder / "results.json")["records"]:
+            groups[r["sample"]].append(r)
+        summaries = {
+            name: v
+            for name, records in groups.items()
+            if (v := specimen_axial_summary(records)) is not None
+        }
+    if sample is None:
+        return summaries
+    if sample not in summaries:
+        raise ValueError(f"No formal axial specimen: {sample}")
+    return summaries[sample]

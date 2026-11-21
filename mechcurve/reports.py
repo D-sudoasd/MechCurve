@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from pypdf import PdfReader, PdfWriter
+from .axial import cycle_landmarks
+from .axial_plots import words, format_landmark
 from .locale import tr, diagnosis
 from .mechanics import RESIDUAL_THRESHOLD_PP
 from .figures import (
@@ -45,6 +47,19 @@ def sample_blocks(records, annotations):
                 ),
             )
         )
+    formal_records = [r for r in records if r["plot_role"] == "main"]
+    landmarks = cycle_landmarks(formal_records)
+    if landmarks["assessed_cycles"]:
+        boundary = landmarks["first_nonqualifying"]
+        if boundary:
+            blocks.append(
+                (
+                    words("首次未达标的完整周", "First complete cycle outside limit"),
+                    format_landmark(boundary["record"], boundary)
+                    + words("；换向 / 卸载行 ", "; reversal / unload rows ")
+                    + f"{boundary['turn_row']} / {boundary['end_row']}",
+                )
+            )
     if len(records) > 1:
         blocks.append(
             (
@@ -106,6 +121,22 @@ def sample_blocks(records, annotations):
                     tr("疑似初始试运行"),
                     diagnosis(r["plot_reason"])
                     + tr(" 本记录保留逐点和逐周指标，正式样品比较采用后续采集。"),
+                )
+            )
+        derived = r.get("axial_derivation", {})
+        if derived.get("strain_source"):
+            blocks.append(
+                (
+                    words("工程应变来源", "Engineering strain source"),
+                    f"100 × ΔL / L₀   ·   L₀ = {derived['original_gauge_mm']:g} mm   ·   "
+                    + words("引伸计标距伸长量", "Extensometer extension"),
+                )
+            )
+        if derived.get("stress_source"):
+            blocks.append(
+                (
+                    words("工程应力来源", "Engineering stress source"),
+                    f"F / A₀   ·   A₀ = {derived['area_mm2']:.5g} mm²",
                 )
             )
         if cs:
@@ -230,6 +261,16 @@ def sample_blocks(records, annotations):
                 fmt(b["force_N"]),
                 fmt(b["stress_MPa"]),
                 fmt(b["strain_pct"]),
+            )
+        if ev.get("after_row") is not None:
+            detail += (
+                words("低载行 ", "Low-signal row ")
+                + str(ev["after_row"])
+                + words("，降幅 ", "; signal drop ")
+                + fmt(100 * ev["drop_fraction"], 1)
+                + "%. "
+                if ev["drop_fraction"] is not None
+                else ""
             )
         blocks.append((tr("终止判读"), detail + diagnosis(ev["basis"]) + tr("。")))
         if (
@@ -371,7 +412,7 @@ def sample_report(folder, name, records, annotations):
                 name,
                 n,
             )
-            table_pages(
+            n = table_pages(
                 pdf,
                 tr("应变分解"),
                 tr("应变差单位为百分点，恢复率单位为 %。段内残余以本段参考点为基准。"),
@@ -408,6 +449,52 @@ def sample_report(folder, name, records, annotations):
                     for c in cycles
                 ],
                 [0.06, 0.14, 0.11, 0.11, 0.11, 0.12, 0.11, 0.10, 0.14],
+                name,
+                n,
+            )
+
+        branches = [
+            [
+                r["sequence"],
+                c["cycle"],
+                *[
+                    fmt(m[key], 4)
+                    for key in (
+                        "loading_secant_GPa",
+                        "unloading_secant_GPa",
+                        "loading_work_MJ_m3",
+                        "returned_work_MJ_m3",
+                        "net_work_MJ_m3",
+                    )
+                ],
+            ]
+            for r in records
+            if r["plot_role"] == "main"
+            for c, m in zip(
+                [c for c in r["cycles"] if c["status"] == "complete"],
+                r.get("cycle_branches", []),
+                strict=True,
+            )
+        ]
+        if branches:
+            table_pages(
+                pdf,
+                words("加载与卸载分支", "Loading and unloading branches"),
+                words(
+                    "割线模量单位 GPa；实测路径功密度单位 MJ/m³。净功按实际端点积分。",
+                    "Secants in GPa; measured path work in MJ/m³. Net work uses the actual endpoints.",
+                ),
+                [
+                    words("段", "Segment"),
+                    words("周", "Cycle"),
+                    words("加载割线", "Load secant"),
+                    words("卸载割线", "Unload secant"),
+                    words("加载功", "Input work"),
+                    words("返回功", "Returned work"),
+                    words("净功", "Net work"),
+                ],
+                branches,
+                [0.09, 0.09, 0.16, 0.17, 0.16, 0.17, 0.16],
                 name,
                 n,
             )

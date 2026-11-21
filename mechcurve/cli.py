@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 
 from .intake import catalog, inspect_records
-from .pipeline import analyze, query, read_json, status
+from .pipeline import axial_summary, analyze, query, read_json, status
 
 
 def main(argv=None):
@@ -19,6 +19,11 @@ def main(argv=None):
     run.add_argument("--output")
     run.add_argument("--notes")
     run.add_argument("--lang", choices=("zh", "en"), default="zh")
+    summary = cmds.add_parser(
+        "summary", help="Axial specimen metrics and evidence rows"
+    )
+    summary.add_argument("run")
+    summary.add_argument("--sample")
     check = cmds.add_parser("verify")
     check.add_argument("run")
     for name in ("cycles", "evidence"):
@@ -45,6 +50,8 @@ def main(argv=None):
             )
         elif args.cmd == "protocols":
             result = catalog()
+        elif args.cmd == "summary":
+            result = axial_summary(args.run, args.sample)
         elif args.cmd == "verify":
             result = status(Path(args.run))
         else:
