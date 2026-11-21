@@ -82,6 +82,49 @@ def write_index(stage, batch, summaries, reports, errors, recovery_by_sample):
             parts.append(
                 f'<a href="{quote(image.with_suffix(".pdf").name)}"><img src="{quote(image.name)}" alt="{alt}"></a>'
             )
+    profile_rows = [r for r in main if r.get("profile_view")]
+    if profile_rows:
+        from .protocol_reports import title as protocol_title, record_asset_paths
+
+        if (stage / "fatigue-cycles.csv").is_file():
+            parts.append(
+                link(
+                    "fatigue-cycles.csv",
+                    label("疲劳逐周幅值与取点", "Fatigue cycles and extrema (CSV)"),
+                )
+            )
+        parts.append(header("各类试验结果", "Protocol results"))
+        parts.append(
+            link(
+                "protocol-metrics.csv",
+                label("指标、单位及原始行 CSV", "Metrics, units and source rows (CSV)"),
+            )
+        )
+        parts.append(
+            table(
+                [
+                    ("样品单页", "Specimen sheet"),
+                    ("试验类型", "Protocol"),
+                    ("详报", "Details"),
+                    ("实测曲线", "Measured curve"),
+                ]
+            )
+        )
+        for r in profile_rows:
+            folder = Path(reports[r["sample"]]).parent
+            plotlinks = " ".join(
+                link(folder / f, Path(f).suffix[1:].upper())
+                for f in record_asset_paths(r["segment"])
+            )
+            vals = [
+                link(folder / tr("样品单页.pdf"), r["sample"]),
+                escape(protocol_title(r["test_type"])),
+                link(reports[r["sample"]], r["record"]),
+                plotlinks,
+            ]
+            parts.append("<tr>" + "".join("<td>" + v + "</td>" for v in vals) + "</tr>")
+        parts.append("</tbody></table></div>")
+        main = [r for r in main if not r.get("profile_view")]
     if main:
         parts.append(header("样品单页", "Specimen sheets"))
         parts.append(

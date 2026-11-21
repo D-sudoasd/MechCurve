@@ -15,7 +15,8 @@ Install the optional agent dependencies with `python -m pip install -e ".[agent]
 
 | Tool | Task |
 | --- | --- |
-| `inspect_directory(input_dir)` | List relative acquisition IDs and associated metadata. |
+| `list_protocols()` | List supported methods and coordinate pairs. |
+| `inspect_directory(input_dir, notes)` | List relative acquisition IDs and associated metadata. |
 | `analyze_directory(input_dir, output_dir, notes, lang)` | Read the source directory and create a versioned offline delivery. Supply the notes as a JSON object. Language defaults to `zh`. |
 | `read_cycles(run, record, cycle)` | Read a segment or a specific specimen-global cycle. |
 | `review_rows(run, record, row, radius)` | Return original observations around a selected physical source row. |
@@ -34,3 +35,7 @@ Open the returned `entry` for the most recently verified run in that language. `
 ### 中文操作顺序
 
 先用 `inspect_directory` 获取原始记录 ID。将样品身份、续测顺序和已知断裂信息写入备注，调用 `analyze_directory`。在返回的 `run` 下，使用 `read_cycles` 和 `review_rows` 核对关键周次、换向点与卸载端点，再用 `verify_delivery` 检查交付，向实验者提供样品单页、批次报告和逐周表。补充解释应列出对应采集文件和原始行号。
+
+### Mixed protocols and single acquisitions
+
+Pass a file or directory via the existing input argument. Inspect the detected physical channels and classification basis, then analyze with any specimen, geometry or window notes. A visible Excel worksheet has its own record ID. Use that exact ID when examining a reported source row. For a fatigue waveform, `read_cycles` accepts an acquisition-local peak-to-peak excursion number. For other protocol metrics, call `read_cycles` with the record ID alone and read the returned `curve.metrics`. Each metric carries its unit and source rows. [Protocol reference](protocols.md)

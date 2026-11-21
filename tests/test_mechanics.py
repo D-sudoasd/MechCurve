@@ -147,7 +147,7 @@ def test_generic_units_duplicate_timestamps_and_missing_strain(tmp_path):
     assert [q["source_row"] for q in p] == [2, 3, 4]
     assert p[-1]["stress_MPa"] == 255 and p[-1]["strain_pct"] is None
     assert r["tensile"]["modulus_GPa"] is None
-    f.write_text("Time [s],Force [lbf]\n0,1\n")
+    f.write_text("Time [s],Force [unrecognized]\n0,1\n")
     with pytest.raises(ValueError):
         read_points(f)
 

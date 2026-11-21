@@ -448,6 +448,12 @@ def paper_curve(record, name, seq, max_cycle):
     return fig
 
 
+def acquisition_axis(record):
+    if "time_s" in record["channels"]:
+        return "time_s", tr("时间 (s)")
+    return "source_row", "Source row" if language() == "en" else "原始行"
+
+
 def curve_page(record, name, seq, max_cycle):
     ps, cs = (
         record["points"],
@@ -573,11 +579,12 @@ def curve_page(record, name, seq, max_cycle):
                 tr("卸载下限 (MPa)") if ykey == "stress_MPa" else tr("卸载下限 (N)"),
             )
     else:
+        order_key, order_label = acquisition_axis(record)
         for small, key, lab in [(side, ykey, ylabel), (lower, xkey, xlabel)]:
             small.plot(
-                axes_values(ps, "time_s"), axes_values(ps, key), lw=1.4, color=ACCENT
+                axes_values(ps, order_key), axes_values(ps, key), lw=1.4, color=ACCENT
             )
-            plot_axis(small, tr("时间 (s)"), lab)
+            plot_axis(small, order_label, lab)
         fit = record["tensile"].get("fit")
         if fit and xkey == "strain_pct" and ykey == "stress_MPa":
             window = ps[idx[fit["first_row"]] : idx[fit["last_row"]] + 1]
@@ -606,6 +613,7 @@ def curve_page(record, name, seq, max_cycle):
 
 def diagnostic(record, name, seq):
     ps = record["points"]
+    order_key, order_label = acquisition_axis(record)
     event = record["event"]
     fig = page(name, tr("采集段 {0}   ·   载荷历程与终止区间", seq))
     for col in (0, 1):
@@ -627,14 +635,14 @@ def diagnostic(record, name, seq):
         ):
             ax = fig.add_axes([0.09 + 0.48 * col, 0.49 - 0.335 * row, 0.365, 0.24])
             ax.plot(
-                axes_values(block, "time_s"),
+                axes_values(block, order_key),
                 axes_values(block, key),
                 color=ACCENT if row == 0 else "#4565a6",
                 lw=1.4,
             )
             plot_axis(
                 ax,
-                tr("时间 (s)"),
+                order_label,
                 {
                     "force_N": tr("力 (N)"),
                     "strain_pct": tr("应变 (%)"),
@@ -646,8 +654,8 @@ def diagnostic(record, name, seq):
                 ax.set_title(
                     tr("全记录") if col == 0 else tr("终止区间放大"), fontsize=11
                 )
-            if event["index"] is not None:
-                ax.axvline(ps[center]["time_s"], ls="--", color="#c85835")
+            if event["index"] is not None and ps[center][order_key] is not None:
+                ax.axvline(ps[center][order_key], ls="--", color="#c85835")
     return fig
 
 

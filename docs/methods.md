@@ -1,5 +1,7 @@
 # Reading a MechCurve report · 如何读报告
 
+This page covers axial tension and cyclic loading. See the [protocol reference](protocols.md) for other fixtures, time histories and custom instrument channels.
+
 A report follows the recorded physical specimen. A CSV identifies an acquisition. When one specimen resumes in another acquisition, give the two records the same `sample` and explicit `sequence` in the notes. Each original row keeps its own acquisition ID, units and strain reference. Target repetition at a boundary contributes two observations. [Example notes](../examples/demo/notes.json)
 
 ## Inputs and units
