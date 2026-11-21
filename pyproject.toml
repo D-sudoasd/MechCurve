@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mechcurve"
+version = "0.1.0"
+description = "Agent-driven, source-traceable analysis of cyclic and tensile tests"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26", "matplotlib>=3.8", "pypdf>=6,<7"]
+
+[project.optional-dependencies]
+agent = ["mcp>=1.12,<2"]
+test = ["pytest>=8"]
+
+[project.scripts]
+mechcurve = "mechcurve.cli:main"
+mechcurve-mcp = "mechcurve.server:main"
+
+[tool.setuptools]
+packages = ["mechcurve"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

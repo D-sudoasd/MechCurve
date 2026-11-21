@@ -1,0 +1,54 @@
+{
+  "tool": "Built-in ImageGen",
+  "style": "Create a high-resolution original conceptual illustration for the MechCurve open-source experimental mechanics gallery. Physically plausible uniaxial materials testing, editorial industrial photography meets precise science illustration. Restrained petrol teal, slate, brushed titanium and warm ivory, soft shadows, no visible words, letters, labels, logos, watermarks, numeric claims, generated data plots or futuristic neon. Landscape composition, premium sharp edge detail. ",
+  "plates": [
+    [
+      "01-cover",
+      "Wide cinematic editorial cover, horizontal 16:9 or wider. A pristine satin titanium dogbone gripped vertically inside a tensile frame, cropped plated wedge jaws at top and bottom, accurate flat gauge section; right-of-center hero with dark petrol-blue negative space at left. Extremely clean, almost photographic. No title."
+    ],
+    [
+      "02-wire-grips",
+      "Front elevation close-up of a straight thin cylindrical silver wire held coaxially between two opposed serrated V-groove grips in a universal testing machine. Clear separation between the jaws, specimen and frame. Clean white laboratory cutaway."
+    ],
+    [
+      "03-gauge",
+      "Macro lateral view of a straight flat tensile coupon with two dark fiducial marks along its gauge section and an accurately mounted clip-on extensometer with two separated knife-edge contact points. Show how gauge length is sensed; detailed editorial rendering, no ruler or numbers."
+    ],
+    [
+      "04-loading",
+      "Two sequential side-by-side scientific vignettes of the SAME slim metal coupon held by opposed axial grips: loading with outward slim teal arrows, unloading with inward amber arrows. Coaxial forces, minimal brushed metal, simple white ground."
+    ],
+    [
+      "05-cycles",
+      "Four-stage chronological conceptual specimen study across a horizontal canvas, the same gauge coupon in tension at incrementally greater axial extensions, visual side-by-side calibrated by common baseline, dark teal precision fixtures. Timeless scientific plate, no quantitative markings."
+    ],
+    [
+      "06-unload-end",
+      "A close optical inspection of a specimen between the testing grips just after returning to a low tensile preload. Emphasize the two fiducial marks and a barely tensioned wire; isolating illumination, no displays or figures."
+    ],
+    [
+      "07-recovery",
+      "Aligned triptych of slender dogbone specimens shown at baseline length, maximum stretched length, and unloaded length. The third length is slightly above the first and visibly less than the second. Uncluttered length brackets, contrasting restrained teal and copper, no numeric values."
+    ],
+    [
+      "08-modulus",
+      "Photoreal laboratory macro of a precision extensometer measuring the early, very small elastic elongation of a straight metallic coupon. Focus on contact tips, a subtle optical gap and crisp brushed surfaces, editorial hero crop. Different angle from gauge-length plate."
+    ],
+    [
+      "09-resume",
+      "A diptych of the same specimen with identical physical fiducial markings in two acquisition sessions in the same tensile rig. A restrained paired file-folder visual at the margin evokes stitching records while retaining distinct origins. Light technical editorial plate."
+    ],
+    [
+      "10-fracture",
+      "Detailed macro scientific cross-section of a ductile dogbone after tensile failure with local necking and two separated cup-and-cone like fracture ends still aligned on the tensile axis. Clean white studio field, muted metal surfaces, no people or text."
+    ],
+    [
+      "11-agent-workflow",
+      "A refined three-stage technical still life flowing left to right: instrument export file stack beside a tensile specimen, a small computational workspace with abstract mechanical event markers, and a neatly stacked report. Crisp isometric laboratory editorial illustration; quiet teal directional connectors only, no lettering, no pseudo-code."
+    ],
+    [
+      "12-delivery",
+      "A quiet top-down editorial still life of a printed mechanics report folder beside a steel wire, calipers and matte mechanical grips, off-white paper, generous breathing room, diffuse soft lab light; only restrained nonnumeric graphic motifs on paper, no legible text, different composition from hero."
+    ]
+  ]
+}

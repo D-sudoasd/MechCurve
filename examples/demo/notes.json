@@ -1,0 +1,94 @@
+{
+  "batch_note": "Synthetic demonstration. All inputs are prescribed numerical examples.",
+  "records": {
+    "cyclic-a.csv": {
+      "sample": "Cyclic A",
+      "sequence": 1,
+      "history": "cyclic",
+      "plot_role": "main",
+      "targets": [
+        {
+          "axis": "strain_pct",
+          "target": 0.45,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 0.85,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 1.25,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 1.65,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 2.05,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 2.45,
+          "lower_MPa": 4
+        }
+      ]
+    },
+    "resumed-b1.csv": {
+      "sample": "Resumed B",
+      "sequence": 1,
+      "history": "cyclic",
+      "plot_role": "main",
+      "targets": [
+        {
+          "axis": "strain_pct",
+          "target": 0.5,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 0.9,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 1.3,
+          "lower_MPa": 4
+        }
+      ]
+    },
+    "resumed-b2.csv": {
+      "sample": "Resumed B",
+      "sequence": 2,
+      "history": "cyclic",
+      "plot_role": "main",
+      "targets": [
+        {
+          "axis": "strain_pct",
+          "target": 1.3,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 1.7,
+          "lower_MPa": 4
+        },
+        {
+          "axis": "strain_pct",
+          "target": 2.1,
+          "lower_MPa": 4
+        }
+      ]
+    },
+    "tensile-c.csv": {
+      "sample": "Tensile C",
+      "history": "tension",
+      "fractured": true
+    }
+  }
+}
