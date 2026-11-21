@@ -1,0 +1,31 @@
+{
+  "batch_note": "Synthetic mixed-protocol demonstration.",
+  "records": {
+    "beam.tsv": {
+      "geometry": {
+        "fixture": "three_point_rectangular",
+        "width_mm": 8,
+        "thickness_mm": 2,
+        "span_mm": 40
+      }
+    },
+    "torsion.csv": {
+      "geometry": {
+        "fixture": "solid_circular",
+        "diameter_mm": 5
+      }
+    },
+    "peel.csv": {
+      "geometry": {
+        "width_mm": 10
+      }
+    },
+    "multi-channel.tsv": {
+      "test_type": "generic",
+      "fit_rows": [
+        2,
+        12
+      ]
+    }
+  }
+}

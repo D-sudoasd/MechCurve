@@ -44,14 +44,18 @@ def maximum(points, key, begin, end):
     return max(valid, key=lambda i: points[i][key]) if valid else None
 
 
-def contiguous(points, channel):
+def contiguous(points, channel, ordered_only=False):
     start = None
     previous = None
     for i, point in enumerate(points):
-        time = point["time_s"]
+        time = point["source_row"] if ordered_only else point["time_s"]
         valid = time is not None and point[channel] is not None
         if start is not None and (
-            not valid or previous is not None and time < previous
+            not valid
+            or previous is not None
+            and (
+                time < previous or point["source_row"] > points[i - 1]["source_row"] + 1
+            )
         ):
             yield start, i - 1
             start = None
@@ -62,7 +66,8 @@ def contiguous(points, channel):
         yield start, len(points) - 1
 
 
-def finish_event(points, channel, meta, opts):
+def finish_event(points, channel, meta, opts, ordered_only=False):
+    order = "source_row" if ordered_only else "time_s"
     row = opts.get("break_before_row")
     if row is not None:
         idx = next((i for i, p in enumerate(points) if p["source_row"] == row), None)
@@ -79,8 +84,9 @@ def finish_event(points, channel, meta, opts):
     for i in range(len(points) - 1):
         a, b = points[i : i + 2]
         if (
-            None in (a[channel], b[channel], a["time_s"], b["time_s"])
-            or b["time_s"] <= a["time_s"]
+            None in (a[channel], b[channel], a[order], b[order])
+            or b[order] <= a[order]
+            or b["source_row"] != a["source_row"] + 1
         ):
             continue
         if (
@@ -221,9 +227,9 @@ def metric(
     }
 
 
-def segment(points, channel, opts, meta, event):
+def segment(points, channel, opts, meta, event, ordered_only=False):
     cycles = []
-    blocks = list(contiguous(points, channel))
+    blocks = list(contiguous(points, channel, ordered_only))
     expected = opts.get("history") == "cyclic" or (
         opts.get("history") is None and bool(meta.get("steps"))
     )
@@ -368,7 +374,11 @@ def segment(points, channel, opts, meta, event):
                 )
             ):
                 stop += 1
-            if stop >= k + 2 and points[stop]["time_s"] > points[k]["time_s"]:
+            if (
+                not ordered_only
+                and stop >= k + 2
+                and points[stop]["time_s"] > points[k]["time_s"]
+            ):
                 for n in range(k + 1, stop):
                     if points[n]["phase"] in ("loading", "unloading", "tension"):
                         points[n]["phase"] = "hold"
@@ -379,7 +389,7 @@ def segment(points, channel, opts, meta, event):
     return cycles, len(blocks)
 
 
-def initial_loading_fit(points, cycles, last):
+def initial_loading_fit(points, cycles, last, ordered_only=False):
     """OLS with intercept on the first traversal of the specified strain window."""
     lower, upper = 0.05, 0.15
     origin = points[0]["strain_pct"]
@@ -410,14 +420,19 @@ def initial_loading_fit(points, cycles, last):
     selected = []
     previous_time = None
     covered = False
+    previous_row = None
     for point in points[: last + 1]:
         if point["source_row"] > stop_row:
             break
         if (
-            any(point[k] is None for k in ("strain_pct", "stress_MPa", "time_s"))
+            any(point[k] is None for k in ("strain_pct", "stress_MPa"))
+            or (not ordered_only and point["time_s"] is None)
             or point["phase"] == "unclassified"
         ):
             return {**result, "reason": "首加载段存在缺失采样"}
+        if previous_row is not None and point["source_row"] != previous_row + 1:
+            return {**result, "reason": "首加载段存在缺失采样"}
+        previous_row = point["source_row"]
         if previous_time is not None and point["time_s"] < previous_time:
             return {**result, "reason": "拟合窗口跨越时钟复位"}
         previous_time = point["time_s"]
@@ -560,8 +575,9 @@ def analyze_record(points, channels, meta, opts):
     channel = "force_N" if "force_N" in channels else "stress_MPa"
     if not any(p[channel] is not None for p in points):
         raise ValueError("主力学通道没有有限采样")
-    event = finish_event(points, channel, meta, opts)
-    cycles, block_count = segment(points, channel, opts, meta, event)
+    ordered_only = "time_s" not in channels
+    event = finish_event(points, channel, meta, opts, ordered_only)
+    cycles, block_count = segment(points, channel, opts, meta, event, ordered_only)
     last = event["index"] if event["index"] is not None else len(points) - 1
     history = "cyclic" if cycles else "tension"
     peak = maximum(points, channel, 0, last)
@@ -573,14 +589,15 @@ def analyze_record(points, channels, meta, opts):
         and p["stress_MPa"] is not None
         and abs(p["stress_MPa"]) > 1
     ]
-    initial_fit = initial_loading_fit(points, cycles, last)
+    initial_fit = initial_loading_fit(points, cycles, last, ordered_only)
     metrics = (
         tensile(
             points,
             last,
             event["status"].startswith("confirmed") or opts.get("complete") is True,
             opts,
-            block_count == 1 and all(p["time_s"] is not None for p in points),
+            block_count == 1
+            and (ordered_only or all(p["time_s"] is not None for p in points)),
             initial_fit,
         )
         if history == "tension"

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import sys
 
-from .inputs import discover
+from .intake import catalog, inspect_records
 from .pipeline import analyze, query, read_json, status
 
 
@@ -12,6 +12,8 @@ def main(argv=None):
     cmds = parser.add_subparsers(dest="cmd", required=True)
     scan = cmds.add_parser("inspect")
     scan.add_argument("input")
+    scan.add_argument("--notes")
+    cmds.add_parser("protocols")
     run = cmds.add_parser("analyze")
     run.add_argument("input")
     run.add_argument("--output")
@@ -38,14 +40,11 @@ def main(argv=None):
                 lang=args.lang,
             )
         elif args.cmd == "inspect":
-            result = [
-                {
-                    "record": r["record"],
-                    "has_xml": bool(r["xml"]),
-                    "has_binary": bool(r["binary"]),
-                }
-                for r in discover(Path(args.input).resolve(strict=True))
-            ]
+            result = inspect_records(
+                args.input, read_json(Path(args.notes)) if args.notes else None
+            )
+        elif args.cmd == "protocols":
+            result = catalog()
         elif args.cmd == "verify":
             result = status(Path(args.run))
         else:

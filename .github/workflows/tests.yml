@@ -30,3 +30,4 @@ jobs:
       - run: python -m pip install -e ".[agent,test]"
       - run: python -m pytest -q
       - run: mechcurve analyze examples/demo --lang en --notes examples/demo/notes.json
+      - run: mechcurve analyze examples/protocols --lang en --notes examples/protocols/notes.json

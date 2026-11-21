@@ -1,33 +1,16 @@
 """Discover records and decode physical channels without modifying acquisition files."""
 
-import csv
+from collections import Counter
+import json
 import hashlib
-import io
 import math
 import os
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-COLUMNS = {
-    "time_s": (
-        ("time", "时间", "elapsed time"),
-        {"s": 1, "sec": 1, "ms": 0.001, "min": 60},
-    ),
-    "extension_mm": (
-        ("extension", "displacement", "位移", "横梁位移"),
-        {"mm": 1, "um": 0.001, "µm": 0.001, "m": 1000},
-    ),
-    "force_N": (("load", "force", "力", "载荷", "加载力"), {"n": 1, "kn": 1000}),
-    "strain_pct": (
-        ("tensile strain", "engineering strain", "strain", "应变", "工程应变"),
-        {"%": 1, "％": 1, "1": 100, "-": 100, "mm/mm": 100},
-    ),
-    "stress_MPa": (
-        ("tensile stress", "engineering stress", "stress", "应力", "工程应力"),
-        {"mpa": 1, "n/mm2": 1, "n/mm²": 1, "gpa": 1000, "kpa": 0.001, "pa": 1e-6},
-    ),
-}
+from .channels import COLUMNS as COLUMNS
+from .tableio import TABLE_SUFFIXES, read_table, workbook
 
 
 def digest(path):
@@ -44,71 +27,8 @@ def number(text):
 
 
 def read_points(path):
-    raw = path.read_bytes()
-    for encoding in ("utf-8-sig", "utf-16", "gb18030"):
-        try:
-            text = raw.decode(encoding)
-            if "\x00" in text or not any(
-                x in text.splitlines()[0] for x in (",", ";", "\t")
-            ):
-                continue
-            break
-        except (UnicodeError, IndexError):
-            continue
-    else:
-        raise ValueError("无法识别表头、编码或分隔符")
-    sep = max((",", ";", "\t"), key=text.splitlines()[0].count)
-    reader = csv.reader(io.StringIO(text), delimiter=sep)
-    rows = [
-        (reader.line_num, row) for row in reader if any(cell.strip() for cell in row)
-    ]
-    if len(rows) < 2:
-        raise ValueError("采样记录为空")
-    header = rows[0][1]
-    unit_line = all(
-        not cell.strip()
-        or cell.strip().startswith(("(", "["))
-        or cell.strip().lower() in {u for _, units in COLUMNS.values() for u in units}
-        for cell in rows[1][1]
-    ) and any(number(cell) is None for cell in rows[1][1])
-    mapping = {}
-    for i, name in enumerate(header):
-        parts = re.fullmatch(r"(.*?)\s*[\[(]([^\])]+)[\])]\s*", name.strip())
-        label = (parts[1] if parts else name).strip().lower()
-        units_row = rows[1][1]
-        unit = (
-            (
-                parts[2]
-                if parts
-                else units_row[i]
-                if unit_line and i < len(units_row)
-                else ""
-            )
-            .strip(" ()[]")
-            .lower()
-        )
-        for key, (aliases, units) in COLUMNS.items():
-            if label == key.lower():
-                unit = unit or next(iter(units))
-            elif label not in aliases:
-                continue
-            if unit not in units or key in mapping:
-                raise ValueError(f"通道单位无法识别或存在重名列 {name} [{unit}]")
-            mapping[key] = (i, units[unit])
-    if "time_s" not in mapping or not {"force_N", "stress_MPa"} & mapping.keys():
-        raise ValueError("需要有单位的时间与力或应力通道")
-    points = []
-    for row_number, row in rows[2 if unit_line else 1 :]:
-        point = dict.fromkeys(COLUMNS)
-        point["source_row"] = row_number
-        for key, (idx, scale) in mapping.items():
-            value = number(row[idx]) if idx < len(row) else None
-            if value is not None:
-                point[key] = value * scale
-        points.append(point)
-    if not points:
-        raise ValueError("无采样行")
-    return points, list(mapping)
+    points, channels, _, _ = read_table(path)
+    return points, channels
 
 
 def waveform(node):
@@ -177,18 +97,47 @@ def metadata(xml, idx):
     }
 
 
+def acquisition_notes(scope, notes):
+    if notes is not None:
+        return notes
+    config = (
+        scope.with_name(scope.name + ".mechcurve.json")
+        if scope.is_file()
+        else scope / "mechcurve.json"
+    )
+    legacy = scope.with_name(scope.name + "_MechCurve") / "实验备注.json"
+    selected = next((p for p in (config, legacy) if p.is_file()), None)
+    return json.loads(selected.read_text(encoding="utf-8-sig")) if selected else {}
+
+
 def output_folder(path):
     if path.name.endswith("_MechCurve") and path.name != "_MechCurve":
         sibling = path.with_name(path.name.removesuffix("_MechCurve"))
-        if sibling.is_dir():
+        if sibling.exists():
             return True
     return path.name.startswith("run-") and (path / "run.json").is_file()
 
 
 def locate_inputs(requested):
     root = Path(requested).resolve(strict=True)
-    if not root.is_dir() or any(output_folder(path) for path in (root, *root.parents)):
-        raise ValueError("请选择实验目录或其上层目录")
+    if any(output_folder(path) for path in (root, *root.parents)):
+        raise ValueError("Select a source acquisition or experimental directory")
+    if root.is_file():
+        if root.suffix.lower() not in TABLE_SUFFIXES:
+            raise ValueError(f"Unsupported acquisition file: {root.suffix}")
+        files = [root]
+        if root.parent.name.endswith(".is_tcyclic_RawData") and re.fullmatch(
+            r"Specimen_RawData_\d+", root.stem, re.I
+        ):
+            folder = root.parent.parent
+            xml = folder / root.parent.name.removesuffix("_RawData")
+            files.extend(
+                p for p in (xml, xml.with_suffix(".id_tcyclic")) if p.is_file()
+            )
+            return folder, files
+        return root.parent, files
+    if not root.is_dir():
+        raise ValueError("Expected an acquisition file or directory")
 
     def raise_walk_error(exc):
         raise exc
@@ -200,7 +149,9 @@ def locate_inputs(requested):
         files.extend(
             folder / name
             for name in names
-            if Path(name).suffix.lower() in {".csv", ".id_tcyclic", ".is_tcyclic"}
+            if not name.startswith("~$")
+            and Path(name).suffix.lower()
+            in TABLE_SUFFIXES | {".id_tcyclic", ".is_tcyclic"}
         )
     branches = {p.relative_to(root).parts[0] for p in files}
     if len(branches) == 1:
@@ -219,7 +170,7 @@ def discover(folder, files=None):
         folder, files = locate_inputs(folder)
     records = []
     for csv_path in files:
-        if csv_path.suffix.lower() != ".csv":
+        if csv_path.suffix.lower() not in TABLE_SUFFIXES:
             continue
         relative = csv_path.relative_to(folder).as_posix()
         match = re.fullmatch(r"Specimen_RawData_(\d+)", csv_path.stem, re.I)
@@ -238,17 +189,45 @@ def discover(folder, files=None):
             else csv_path.parent.relative_to(folder)
         )
         identity = (prefix / (f"{group} · S{idx}" if bluehill else group)).as_posix()
-        records.append(
-            {
-                "record": relative,
-                "path": csv_path,
-                "xml": xml if xml and xml.exists() else None,
-                "binary": binary if binary and binary.exists() else None,
-                "index": idx,
-                "group": group,
-                "sample": identity,
-            }
-        )
+        desc = {
+            "record": relative,
+            "path": csv_path,
+            "xml": xml if xml and xml.exists() else None,
+            "binary": binary if binary and binary.exists() else None,
+            "index": idx,
+            "group": group,
+            "sample": identity,
+        }
+        if csv_path.suffix.lower() != ".xlsx":
+            records.append(desc)
+            continue
+        try:
+            book = workbook(csv_path)
+            try:
+                sheets = [
+                    s.title for s in book.worksheets if s.sheet_state == "visible"
+                ]
+            finally:
+                book.close()
+            if not sheets:
+                raise ValueError("Workbook has no visible worksheets")
+        except ValueError as exc:
+            records.append({**desc, "input_error": str(exc)})
+        else:
+            for sheet in sheets:
+                records.append(
+                    {
+                        **desc,
+                        "record": relative + "#" + sheet,
+                        "sheet": sheet,
+                        "sample": identity + " · " + sheet,
+                    }
+                )
+    # A shared stem in different formats is not proof of specimen identity.
+    counts = Counter(r["sample"] for r in records)
+    for r in records:
+        if counts[r["sample"]] > 1:
+            r["sample"] = r["record"]
     return records
 
 

@@ -112,6 +112,7 @@ def test_cli_mcp_and_incremental_delivery(tmp_path, monkeypatch):
             assert {t.name for t in tools.tools} == {
                 "analyze_directory",
                 "inspect_directory",
+                "list_protocols",
                 "read_cycles",
                 "review_rows",
                 "verify_delivery",
@@ -122,6 +123,24 @@ def test_cli_mcp_and_incremental_delivery(tmp_path, monkeypatch):
                 assert not reply.isError, reply.content
                 return json.loads(reply.content[0].text)
 
+            assert "torsion" in await call("list_protocols", {})
+            twist = tmp_path / "twist.tsv"
+            twist.write_text("angle_deg\ttorque_Nm\n0\t0\n1\t2\n")
+            inspected = await session.call_tool(
+                "inspect_directory", {"input_dir": str(twist)}
+            )
+            assert not inspected.isError and "torsion" in inspected.content[0].text
+            multi = await call(
+                "analyze_directory", {"input_dir": str(twist), "lang": "en"}
+            )
+            observed = await call(
+                "read_cycles", {"run": multi["run"], "record": twist.name}
+            )
+            assert observed["test_type"] == "torsion"
+            assert observed["curve"]["metrics"][0]["value"] == 2
+            assert (await call("verify_delivery", {"run": multi["run"]}))[
+                "status"
+            ] == "complete"
             same = await call(
                 "analyze_directory",
                 {"input_dir": str(source), "output_dir": str(output), "notes": notes},

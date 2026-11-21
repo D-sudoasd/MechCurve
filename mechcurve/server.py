@@ -4,23 +4,22 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from .inputs import discover
+from .intake import catalog, inspect_records
 from .pipeline import analyze, query, status
 
 server = FastMCP("MechCurve")
 
 
 @server.tool()
-def inspect_directory(input_dir: str) -> list[dict]:
-    """List acquisition IDs before analyzing or supplying a specimen note."""
-    return [
-        {
-            "record": r["record"],
-            "has_xml": bool(r["xml"]),
-            "has_binary": bool(r["binary"]),
-        }
-        for r in discover(Path(input_dir).resolve(strict=True))
-    ]
+def inspect_directory(input_dir: str, notes: dict | None = None) -> list[dict]:
+    """Inspect channel names, units, protocol evidence and unresolved coordinate choices."""
+    return inspect_records(input_dir, notes)
+
+
+@server.tool()
+def list_protocols() -> dict:
+    """List supported mechanical test types and their available coordinate pairs."""
+    return catalog()
 
 
 @server.tool()

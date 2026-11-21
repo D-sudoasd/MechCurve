@@ -6,6 +6,14 @@
 
 **One physical specimen, one performance sheet.** Give a local agent a folder of tensile or cyclic-loading exports. MechCurve finds the measured reversals, fits the first-loading modulus, and writes a printable PDF with the stress–strain history, recovery scatter and cycle metrics. Each reported event points back to its acquisition and original CSV row.
 
+### Beyond axial testing
+
+Give an agent one acquisition file or a mixed folder of CSV, TSV, TXT and Excel workbooks. MechCurve also handles compression, flexure, shear, torsion, creep, relaxation, fatigue, indentation and peel. Each specimen sheet reports quantities appropriate to its method, from a first-loading compression modulus to a measured hold rate. Other instrument curves can retain their native coordinates and an explicitly selected fit interval.
+
+<img src="assets/showcase/protocol-overview.webp" width="100%" alt="Four software-generated examples showing beam flexure, torque–twist, a creep hold and a fatigue waveform">
+
+[Open the twelve-page protocol example](assets/showcase/protocol-sheets.en.pdf) · [Supported methods, units and assumptions](docs/protocols.md) · [Mixed campaign inputs](examples/protocols)
+
 ### See what the software produces
 
 <img src="assets/showcase/sheet-overview.webp" alt="Actual software output for synthetic Cyclic A, Resumed B and Tensile C, one page per specimen" width="100%">

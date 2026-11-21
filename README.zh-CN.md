@@ -6,6 +6,14 @@
 
 **每个物理样品一页纸。** 将循环加载或单调拉伸导出的文件夹交给本地 Agent，MechCurve 会定位加载换向与卸载端点，拟合首加载模量，生成包含应力–应变曲线、恢复散点和逐周性能的 PDF。报告中的关键事件可以追溯到采集文件和原始 CSV 行。
 
+### 分析更多力学试验
+
+将一个文件或一批 CSV、TSV、TXT、Excel 工作簿交给 Agent。除拉伸和循环加载外，MechCurve 可以分析压缩、弯曲、剪切、扭转、蠕变、松弛、疲劳、压入和剥离。样品页按试验类型显示对应指标：例如压缩首加载模量、指定梁几何下的名义弯曲应力、实测保持段的平均蠕变速率。陌生仪器通道也可以保留原始坐标出图，并按指定行区间拟合。
+
+<img src="assets/showcase/protocol-overview.webp" width="100%" alt="四种合成实测曲线示例：弯曲、扭转、蠕变与疲劳波形">
+
+[查看十二页中文示例](assets/showcase/protocol-sheets.zh.pdf) · [支持的曲线、单位与判定条件](docs/protocols.md) · [混合试验示例数据](examples/protocols)
+
 ### 实际输出
 
 <img src="assets/showcase/sheet-overview-zh.webp" alt="三个合成样品的中文报告，从左到右为递增循环、分段续测、单调拉伸" width="100%">
