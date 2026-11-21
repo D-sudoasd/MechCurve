@@ -2,6 +2,12 @@
 
 [English README](../README.md) · [中文首页](../README.zh-CN.md)
 
+## Axial field guide · 循环与拉断读图
+
+The new [test-bench cover](../assets/gallery/axial-bench.webp) is an original ImageGen concept illustration. The three quantitative plates are generated from the public axial demo with [the figure script](../examples/render_axial_guide.py). 封面为试验台概念图，以下定量图来自公开示例的实际分析结果。
+
+[Cycles and the recovery threshold](../assets/showcase/guide-cycles.png) · [Proof stress and the terminal bracket](../assets/showcase/guide-fracture.png) · [Work and secants](../assets/showcase/guide-branches.png)
+
 ## Software output
 
 Each figure below comes from the bundled synthetic acquisitions. Click a preview to open the vector PDF. 数值图均由公开合成 CSV 动态生成。点开预览可查看矢量 PDF。

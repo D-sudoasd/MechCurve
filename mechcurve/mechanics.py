@@ -4,6 +4,7 @@ import math
 from statistics import median
 
 import numpy as np
+from .axial import cycle_branches, terminal_transition
 
 
 RESIDUAL_THRESHOLD_PP = 0.03
@@ -67,66 +68,57 @@ def contiguous(points, channel, ordered_only=False):
 
 
 def finish_event(points, channel, meta, opts, ordered_only=False):
-    order = "source_row" if ordered_only else "time_s"
+    measured = terminal_transition(points, channel, ordered_only)
+    marked = meta.get("instrument_break_valid") or opts.get("fractured") is True
     row = opts.get("break_before_row")
+    idx = None
     if row is not None:
         idx = next((i for i, p in enumerate(points) if p["source_row"] == row), None)
         if idx is None or points[idx][channel] is None:
             raise ValueError("指定的断裂前行号缺少有效载荷或超出原始表")
-        return {
-            "status": "confirmed_row",
-            "index": idx,
-            "basis": "实验备注指定断裂前最后有效行",
-        }
-    ys = [p[channel] for p in points if p[channel] is not None]
-    span = max(ys) - min(ys) if ys else 0
-    candidates = []
-    for i in range(len(points) - 1):
-        a, b = points[i : i + 2]
-        if (
-            None in (a[channel], b[channel], a[order], b[order])
-            or b[order] <= a[order]
-            or b["source_row"] != a["source_row"] + 1
-        ):
-            continue
-        if (
-            a[channel] - b[channel] < 0.35 * span
-            or span <= 0
-            or b[channel] > min(ys) + 0.25 * span
-        ):
-            continue
-        motion = next(
-            (
-                k
-                for k in ("extension_mm", "strain_pct")
-                if a[k] is not None and b[k] is not None
-            ),
-            None,
+        status, basis = "confirmed_row", "实验备注指定断裂前最后有效行"
+    elif measured:
+        idx = measured[0]
+        status = "confirmed_row" if marked else "candidate"
+        basis = (
+            "载荷骤降并保持低位，位移或应变未同步卸载"
+            if len(points) - measured[1] > 1
+            else "末端载荷骤降，仅有一个低载采样点"
         )
-        if (
-            motion
-            and b[motion] >= a[motion]
-            and all(
-                p[channel] is not None and p[channel] <= min(ys) + 0.3 * span
-                for p in points[i + 1 :]
-            )
-        ):
-            candidates.append(i)
-    marked = meta.get("instrument_break_valid") or opts.get("fractured") is True
-    if len(candidates) == 1:
-        return {
-            "status": "confirmed_row" if marked else "candidate",
-            "index": candidates[0],
-            "basis": "载荷骤降并保持低位，位移或应变未同步卸载"
-            + ("；有独立断裂记录" if marked else "；缺少独立断裂标记"),
-        }
-    return {
-        "status": "confirmed_record" if marked else "unlocated",
-        "index": None,
-        "basis": "有试样级断裂记录，采样点尚未定位"
-        if marked
-        else "未检出可唯一归属的断裂采样点",
+        basis += "；有独立断裂记录" if marked else "；缺少独立断裂标记"
+    else:
+        status = "confirmed_record" if marked else "unlocated"
+        basis = (
+            "有试样级断裂记录，采样点尚未定位"
+            if marked
+            else "未检出可唯一归属的断裂采样点"
+        )
+    evidence = {
+        "status": status,
+        "index": idx,
+        "basis": basis,
+        "after_row": None,
+        "after": None,
+        "drop_channel": None,
+        "drop_fraction": None,
+        "low_tail_points": None,
+        "motion_channel": None,
     }
+    if measured and idx == measured[0]:
+        a, b, motion = measured
+        before, after = points[a], points[b]
+        value = before[channel]
+        evidence.update(
+            after_row=after["source_row"],
+            after={
+                k: after[k] for k in ("time_s", "force_N", "stress_MPa", "strain_pct")
+            },
+            drop_channel=channel,
+            drop_fraction=(value - after[channel]) / abs(value) if value else None,
+            low_tail_points=len(points) - b,
+            motion_channel=motion,
+        )
+    return evidence
 
 
 def reversals(points, ch, lo, hi, threshold):
@@ -471,7 +463,9 @@ def initial_loading_fit(points, cycles, last, ordered_only=False):
     }
 
 
-def tensile(points, last, complete, opts, fit_allowed, initial_fit):
+def tensile(
+    points, last, complete, opts, fit_allowed, initial_fit, fracture_confirmed=False
+):
     p = points[: last + 1]
     high = maximum(p, "stress_MPa", 0, last)
     result = {
@@ -483,7 +477,7 @@ def tensile(points, last, complete, opts, fit_allowed, initial_fit):
         "fit_reason": initial_fit["reason"],
     }
     l0, lf = opts.get("original_gauge_mm"), opts.get("final_gauge_mm")
-    if complete and l0 and lf and l0 > 0 and lf >= l0:
+    if fracture_confirmed and l0 and lf and l0 > 0 and lf >= l0:
         result["elongation_after_break_pct"] = 100 * (lf - l0) / l0
     if high is None:
         return result
@@ -559,6 +553,7 @@ def offset_yield(result, p, x, y, slope, intercept, fit_end):
             result.update(
                 rp02_MPa=float(y[i - 1] + w * (y[i] - y[i - 1])),
                 rp02_rows=[p[i - 1]["source_row"], p[i]["source_row"]],
+                rp02_strain_pct=float(100 * (x[i - 1] + w * (x[i] - x[i - 1]))),
             )
             break
 
@@ -599,6 +594,7 @@ def analyze_record(points, channels, meta, opts):
             block_count == 1
             and (ordered_only or all(p["time_s"] is not None for p in points)),
             initial_fit,
+            fracture_confirmed=event["status"].startswith("confirmed"),
         )
         if history == "tension"
         else {}
@@ -648,4 +644,5 @@ def analyze_record(points, channels, meta, opts):
         "peak_stress": points[high] if high is not None else None,
         "tensile": metrics,
         "initial_loading_fit": initial_fit,
+        "cycle_branches": cycle_branches(points, cycles),
     }

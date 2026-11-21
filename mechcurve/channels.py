@@ -40,6 +40,10 @@ COLUMNS = {
         ("extension", "displacement", "位移", "横梁位移", "crosshead displacement"),
         LENGTH,
     ),
+    "gauge_extension_mm": (
+        ("extensometer extension", "gauge extension", "引伸计伸长量", "标距伸长量"),
+        LENGTH,
+    ),
     "force_N": (
         (
             "load",
@@ -47,6 +51,10 @@ COLUMNS = {
             "力",
             "载荷",
             "加载力",
+            "tensile load",
+            "tensile force",
+            "拉伸载荷",
+            "拉伸力",
             "compressive force",
             "压缩载荷",
             "peel force",
@@ -58,6 +66,9 @@ COLUMNS = {
         (
             "tensile strain",
             "engineering strain",
+            "extensometer strain",
+            "引伸计应变",
+            "拉伸应变",
             "strain",
             "应变",
             "工程应变",
@@ -72,6 +83,7 @@ COLUMNS = {
         (
             "tensile stress",
             "engineering stress",
+            "拉伸应力",
             "stress",
             "应力",
             "工程应力",

@@ -5,7 +5,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from .intake import catalog, inspect_records
-from .pipeline import analyze, query, status
+from .pipeline import axial_summary, analyze, query, status
 
 server = FastMCP("MechCurve")
 
@@ -31,6 +31,12 @@ def analyze_directory(
 ) -> dict:
     """Create versioned figures, CSVs and PDF reports. Use record IDs from inspect_directory."""
     return analyze(input_dir, output_dir, notes, lang=lang)
+
+
+@server.tool()
+def summarize_axial(run: str, sample: str | None = None) -> dict:
+    """Read first-loading modulus, recovery threshold landmarks and tensile fracture evidence by specimen."""
+    return axial_summary(run, sample)
 
 
 @server.tool()

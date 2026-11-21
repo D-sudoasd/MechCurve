@@ -18,6 +18,7 @@ Install the optional agent dependencies with `python -m pip install -e ".[agent]
 | `list_protocols()` | List supported methods and coordinate pairs. |
 | `inspect_directory(input_dir, notes)` | List relative acquisition IDs and associated metadata. |
 | `analyze_directory(input_dir, output_dir, notes, lang)` | Read the source directory and create a versioned offline delivery. Supply the notes as a JSON object. Language defaults to `zh`. |
+| `summarize_axial(run, sample)` | Read a specimen’s first-loading fit, highest qualifying cycles, first outside the criterion, repeated target visits and terminal evidence. Omit sample to list all formal axial specimens. |
 | `read_cycles(run, record, cycle)` | Read a segment or a specific specimen-global cycle. |
 | `review_rows(run, record, row, radius)` | Return original observations around a selected physical source row. |
 | `verify_delivery(run)` | Recheck artifact hashes and provide paths, counts and parsing failures. |
@@ -39,3 +40,7 @@ Open the returned `entry` for the most recently verified run in that language. `
 ### Mixed protocols and single acquisitions
 
 Pass a file or directory via the existing input argument. Inspect the detected physical channels and classification basis, then analyze with any specimen, geometry or window notes. A visible Excel worksheet has its own record ID. Use that exact ID when examining a reported source row. For a fatigue waveform, `read_cycles` accepts an acquisition-local peak-to-peak excursion number. For other protocol metrics, call `read_cycles` with the record ID alone and read the returned `curve.metrics`. Each metric carries its unit and source rows. [Protocol reference](protocols.md)
+
+### A specimen-first axial query
+
+After `analyze_directory`, call `summarize_axial` with the returned run path. Quote the `record` together with every row. The two entries in `rp02_rows` bracket an interpolated proof stress; the entries `before_row` and `after_row` bracket the measured terminal drop. For resumed specimens read `repeated_targets` to compare visits at identical programmed targets. Use `review_rows` to inspect the underlying observations. The CLI equivalent is `mechcurve summary RUN --sample "Tensile C"`. New runs also provide the compact `axial-summary.json` and per-cycle `cycle-branches.csv` in the offline index.

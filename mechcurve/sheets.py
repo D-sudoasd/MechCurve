@@ -5,11 +5,19 @@ from .locale import tr, diagnosis, language
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
-import numpy as np
 
+from .axial import cycle_landmarks, representative_cycles
+from .axial_plots import (
+    words,
+    terminal_record,
+    terminal_panel,
+    mark_tension,
+    format_landmark,
+)
 from .mechanics import RESIDUAL_THRESHOLD_PP, recovery_summary
 from .figures import (
     history_figure,
+    EVENT,
     ACCENT,
     INK,
     MUTED,
@@ -167,12 +175,20 @@ def strain_response(fig, records):
 def sample_sheet(destination, name, records):
     first = records[0]
     fit = first["initial_loading_fit"]
+    terminal = terminal_record(records)
     cycles = [(r, c) for r in records for c in r["cycles"]]
     completed = [(r, c) for r, c in cycles if c["status"] == "complete"]
     summary = recovery_summary(c for _, c in cycles)
     fig = plt.figure(figsize=(8.27, 11.69), facecolor="white")
     fig.text(0.075, 0.966, name, fontsize=22, weight="bold", color=INK, va="top")
-    program = tr("循环拉伸") if cycles else tr("单调拉伸")
+    has_tensile = any(r["history"] == "tension" for r in records)
+    program = (
+        words("循环与拉伸", "Cyclic + tensile")
+        if cycles and has_tensile
+        else tr("循环拉伸")
+        if cycles
+        else tr("单调拉伸")
+    )
     description = tr("{0}   ·   {1} 段正式采集", program, len(records))
     if cycles:
         description += tr("   ·   {0} 个完整周次", len(completed))
@@ -197,6 +213,20 @@ def sample_sheet(destination, name, records):
         else:
             displayed = tr("未测得")
         highlights.append((tr("最大完全可恢复应变"), displayed))
+    elif terminal["tensile"].get("uts_MPa") is not None:
+        highlights.append(
+            (
+                words("抗拉强度", "Tensile strength"),
+                fmt(terminal["tensile"]["uts_MPa"], 1) + " MPa",
+            )
+        )
+    elif terminal["peak_stress"] is not None:
+        highlights.append(
+            (
+                words("实测峰值应力", "Measured peak stress"),
+                fmt(terminal["peak_stress"]["stress_MPa"], 1) + " MPa",
+            )
+        )
     for (label, value), y in zip(highlights, (0.951, 0.906)):
         fig.text(
             0.690 if language() == "en" else 0.716,
@@ -246,11 +276,13 @@ def sample_sheet(destination, name, records):
     ax = fig.add_axes(
         [0.115, 0.614 if cycles else 0.510, 0.79, 0.194 if cycles else 0.300]
     )
-    history_figure(fig, ax, records, [0.478, 0.856, 0.425, 0.007])
+    axes = history_figure(fig, ax, records, [0.478, 0.856, 0.425, 0.007])
+    if not cycles:
+        mark_tension(ax, terminal, axes)
     caption = segment_caption(records)
     if len(records) > 1:
         caption += tr("。各段应变沿用本段起点。")
-    if caption:
+    if caption and cycles:
         fig.text(0.110, 0.559, caption, fontsize=8.2, color=MUTED)
     if cycles:
         fig.text(
@@ -270,14 +302,8 @@ def sample_sheet(destination, name, records):
                 fontsize=8,
             )
         strain_response(fig, records)
-    elif first["tensile"].get("fit_reason"):
-        fig.text(
-            0.110,
-            0.450,
-            diagnosis(first["event"]["basis"]) + tr("。"),
-            fontsize=9,
-            color=MUTED,
-        )
+    else:
+        terminal_panel(fig, terminal)
     fig.text(
         0.077,
         0.282 if cycles else 0.394,
@@ -320,10 +346,11 @@ def sample_sheet(destination, name, records):
             tr("卸载下限\n(MPa)"),
             tr("恢复判定"),
         ]
-        selected = (
-            cycles
-            if len(cycles) <= 14
-            else [cycles[i] for i in np.linspace(0, len(cycles) - 1, 14, dtype=int)]
+        selected = representative_cycles(
+            cycles,
+            limit=8
+            if has_tensile or terminal["event"]["source_row"] is not None
+            else 11,
         )
         rows = [
             [
@@ -364,28 +391,28 @@ def sample_sheet(destination, name, records):
             RESIDUAL_THRESHOLD_PP,
         )
     else:
-        t = first["tensile"]
-        peak = first["peak_observed"] or {}
+        t = terminal["tensile"]
+        peak = terminal["peak_observed"] or {}
         labels = [
-            tr("最大力 (N)"),
-            tr("最高应力 (MPa)"),
-            tr("抗拉强度 (MPa)"),
+            words("最大力 (N)", "Max force (N)"),
+            words("峰值应力处应变 (%)", "Strain at peak σ (%)"),
             "Rp0.2 (MPa)",
-            tr("断后伸长率 (%)"),
+            words("事件前应力 (MPa)", "Pre-event σ (MPa)"),
+            words("断后标距伸长率 (%)", "Post-break elong. (%)"),
         ]
         rows = [
             [
                 fmt(v)
                 for v in (
                     peak.get("force_N"),
-                    (first["peak_stress"] or {}).get("stress_MPa"),
-                    t.get("uts_MPa"),
+                    (terminal["peak_stress"] or {}).get("strain_pct"),
                     t.get("rp02_MPa"),
+                    (terminal["event"]["before"] or {}).get("stress_MPa"),
                     t.get("elongation_after_break_pct"),
                 )
             ]
         ]
-        note = diagnosis(first["event"]["basis"]) + tr("。")
+        note = diagnosis(terminal["event"]["basis"]) + tr("。")
     height = min(0.223, 0.028 + 0.0150 * len(rows))
     ta = fig.add_axes([0.074, (0.266 if cycles else 0.374) - height, 0.858, height])
     ta.axis("off")
@@ -414,6 +441,43 @@ def sample_sheet(destination, name, records):
             and rows[i - 1][-1] == tr(RECOVERY_LABEL[True])
         ):
             cell.set_text_props(color=ACCENT, weight="bold")
+    if cycles:
+        marks = cycle_landmarks(records)
+        first_fail = marks["first_nonqualifying"]
+        fig.text(
+            0.078,
+            0.059,
+            format_landmark(words("首次未达标", "First outside limit"), first_fail),
+            fontsize=8,
+            color=MUTED,
+        )
+        if has_tensile or terminal["event"]["source_row"] is not None:
+            e = terminal["event"]
+            t = terminal["tensile"]
+            before = e["before"] or {}
+            fig.text(
+                0.078,
+                0.089,
+                words("终止段", "Terminal segment")
+                + f" {terminal['sequence']}   ·   "
+                + f"UTS {fmt(t.get('uts_MPa'), 1)} MPa   ·   Rp0.2 {fmt(t.get('rp02_MPa'), 1)} MPa   ·   "
+                + words("事件前应变 ", "Pre-event strain ")
+                + fmt(before.get("strain_pct"))
+                + " %",
+                fontsize=8,
+                color=INK,
+            )
+        if terminal["event"]["status"] != "unlocated":
+            fig.text(
+                0.93,
+                0.059,
+                words("终止判读", "Termination")
+                + " · "
+                + tr(EVENT[terminal["event"]["status"]]),
+                ha="right",
+                fontsize=8,
+                color=MODULUS_COLOR,
+            )
     fig.text(0.078, 0.025, note, fontsize=8, color=MUTED)
     fig.savefig(destination / tr("样品单页.pdf"))
     plt.close(fig)

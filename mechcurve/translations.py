@@ -1,6 +1,7 @@
 """English report catalog keyed by the established Chinese display text."""
 
 EN = {
+    "末端载荷骤降，仅有一个低载采样点": "Terminal load drop with a single low observation",
     "     ·     {0}达到最大值": "    ·    maximum at {0}",
     "   /   段 {0}": "   /   segment {0}",
     "   /   采集段 {0}": "   /   segment {0}",

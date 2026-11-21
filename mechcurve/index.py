@@ -56,6 +56,8 @@ def write_index(stage, batch, summaries, reports, errors, recovery_by_sample):
         + "</p>"
     )
     nav = [
+        ("axial-summary.json", "轴向样品摘要", "Axial specimen summaries"),
+        ("cycle-branches.csv", "逐周功与割线刚度", "Cycle work and secants"),
         ("每个样品一页.pdf", "每个样品一页", "Specimen sheets"),
         ("样品弹性模量.csv", "弹性模量", "First-loading modulus"),
         ("批次报告.pdf", "批次 PDF", "Campaign report"),

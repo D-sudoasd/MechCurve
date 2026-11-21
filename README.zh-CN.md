@@ -1,69 +1,74 @@
 # MechCurve 力学曲线分析
 
-[English](README.md) · [样品单页 PDF](assets/showcase/specimen-sheets.zh.pdf) · [指标定义](docs/methods.md) · [图册](docs/gallery.md)
+**循环加载和拉断，每个物理样品一页纸。** 把试验机导出的文件交给本地 Agent，即可逐周查看加载到了哪里、卸载后恢复了多少，并从屈服、峰值和断裂判读回到原始采样行。
 
-<img src="assets/gallery/01-cover-preview.webp" alt="拉伸试样与楔形夹具概念图" width="100%">
+[English](README.md) · [打开三页中文样品报告](assets/showcase/specimen-sheets.zh.pdf) · [运行示例](#运行示例) · [接入 Agent](docs/agent.md)
 
-**每个物理样品一页纸。** 将循环加载或单调拉伸导出的文件夹交给本地 Agent，MechCurve 会定位加载换向与卸载端点，拟合首加载模量，生成包含应力–应变曲线、恢复散点和逐周性能的 PDF。报告中的关键事件可以追溯到采集文件和原始 CSV 行。
+<img src="assets/gallery/axial-bench.webp" width="100%" alt="试验台概念插图，完整拉伸试样带有标距刻线，旁边是断裂后对齐的两半试样">
 
-### 分析更多力学试验
+## 这个样品最大能完全恢复到多大施加应变？
 
-将一个文件或一批 CSV、TSV、TXT、Excel 工作簿交给 Agent。除拉伸和循环加载外，MechCurve 可以分析压缩、弯曲、剪切、扭转、蠕变、松弛、疲劳、压入和剥离。样品页按试验类型显示对应指标：例如压缩首加载模量、指定梁几何下的名义弯曲应力、实测保持段的平均蠕变速率。陌生仪器通道也可以保留原始坐标出图，并按指定行区间拟合。
+**Cyclic A** 在第 4 周加载到 1.650%，卸载到实测下限后残余为 0.028 个百分点。第 5 周加载到 2.050%，残余增至 0.061 个百分点。按**段内残余严格小于 0.030 个百分点**的判据，第 4 周是已测完整循环中施加应变最高的达标周。首加载支在 0.05%–0.15% 应变增量内拟合，拉伸弹性模量为 **52.00 GPa**。
 
-<img src="assets/showcase/protocol-overview.webp" width="100%" alt="四种合成实测曲线示例：弯曲、扭转、蠕变与疲劳波形">
+[![左图按周次绘制应力应变加载与卸载支，右图显示第4与第5周位于残余应变门槛的两侧](assets/showcase/guide-cycles.png)](assets/showcase/cyclic-detail.zh.pdf)
 
-[查看十二页中文示例](assets/showcase/protocol-sheets.zh.pdf) · [支持的曲线、单位与判定条件](docs/protocols.md) · [混合试验示例数据](examples/protocols)
+同一样品的续测放在同一页。**Resumed B** 两次加载到 1.3% 目标，峰值应力分别为 636.56 和 642.85 MPa。两次观测各自保留卸载端点和应变参考点。疑似初始试运行也可以在详报中回查。[续测合并图](assets/showcase/resumed-history.pdf) · [循环指标定义](docs/methods.md)
 
-### 实际输出
+## 峰值、屈服和拉断分别发生在哪里？
 
-<img src="assets/showcase/sheet-overview-zh.webp" alt="三个合成样品的中文报告，从左到右为递增循环、分段续测、单调拉伸" width="100%">
+**Tensile C** 在原始第 302 行达到 399.85 MPa，此时应变为 3.000%。随后应力下降，应变继续增加。骤降前最后一行是第 347 行，应力为 327.85 MPa，应变为 3.450%。到第 350 行，载荷下降了 90.2%。本合成示例另有独立的试验备注确认发生拉断。
 
-公开示例中，**Cyclic A** 的首周模量为 **52.00 GPa**。施加应变为 1.65% 时，实测卸载端点对应的段内残余为 0.028 个百分点；加载到 2.05% 后，残余增至 0.061 个百分点。因此样品页突出显示 **1.650%**，即已观测完整循环中达到 0.03 个百分点判据的最大施加应变。**Resumed B** 的两次采集共用一页，两次达到 1.3% 的记录分别保留。**Tensile C** 用预设的断裂说明和载荷骤降演示如何定位断裂前采样行。三组输入均由公开脚本合成。
+[![左图标出拉伸曲线的Rp0.2和应力峰值，右图放大原始第347至350行的载荷骤降](assets/showcase/guide-fracture.png)](assets/showcase/tensile-detail.zh.pdf)
 
-[打开三张中文样品页](assets/showcase/specimen-sheets.zh.pdf) · [阅读中文批次报告](assets/showcase/campaign-report.zh.pdf) · [查看六种软件出图](docs/gallery.md#software-output)
+仅凭曲线发现的骤降标记为候选。采集在高载下结束时，报告会说明能否定位断裂行。样品页分别列出**事件前引伸计应变**和**断后标距伸长率**；示例中后者由 30.00 mm 和 30.87 mm 算得 **2.900%**。[拉断样品详报](assets/showcase/tensile-detail.zh.pdf) · [查看原始 CSV](examples/demo/tensile-c.csv)
 
-### 运行示例
+## 三张样品页
 
-需要 Python 3.11 或以上版本。在项目目录中执行：
+[![循环、分段续测和拉断三个样品的中文实算单页](assets/showcase/sheet-overview-zh.webp)](assets/showcase/specimen-sheets.zh.pdf)
+
+| 想查什么 | 到哪里看 |
+| --- | --- |
+| 首周模量和完全可恢复应变 | 页首红色数值；`axial-summary.json` 可查拟合行、R²、并列最高达标周和首次未达标周 |
+| 循环中做了多少功、刚度如何变化 | `cycle-branches.csv` 给出加载与卸载割线、加载功、返回功、净功以及三个端点的原始行 |
+| 拉断或屈服的依据 | 样品详报、骤降区间图，以及 Rp0.2 插值的两行、峰值应力处应变、骤降前后的行号 |
+
+<details>
+<summary>展开看六个完整循环的分支功与割线模量</summary>
+
+<img src="assets/showcase/guide-branches.png" width="100%" alt="六周加载功密度与返回功密度的柱状图，以及加载、卸载端点割线模量">
+
+路径功按工程应力对无量纲工程应变积分。卸载后存在残余时，路径未闭合，净功包含起终状态不同的影响。首加载弹性模量独立使用线性拟合计算。[计算定义与单位](docs/methods.md)
+
+</details>
+
+## 运行示例
+
+在项目根目录运行，需要 Python 3.11 或以上版本：
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[agent]"
-mechcurve inspect examples/demo
 mechcurve analyze examples/demo --notes examples/demo/notes.json --lang zh
 ```
 
-Linux 或 macOS 用 `source .venv/bin/activate` 激活环境。中文图文可使用微软雅黑或 Noto Sans CJK SC，也可以将 `MECHCURVE_FONT` 指向本机字体文件。运行结束后，打开 **examples/demo_MechCurve/打开分析结果.html**，即可离线查看 PDF、矢量图、CSV 和 JSON。用返回的 run 目录替换下方的 RUN_DIRECTORY，可以逐周核对续测交界处的重复目标。
+Linux 和 macOS 可以用 `source .venv/bin/activate` 激活环境。打开 **examples/demo_MechCurve/打开分析结果.html**。将下面的 `RUN` 换成命令返回的版本目录，即可按样品读摘要或查原始行：
 
 ```sh
-mechcurve cycles RUN_DIRECTORY --record resumed-b1.csv --cycle 3
-mechcurve cycles RUN_DIRECTORY --record resumed-b2.csv --cycle 4
-mechcurve verify RUN_DIRECTORY
+mechcurve summary RUN --sample "Cyclic A"
+mechcurve evidence RUN --record tensile-c.csv --row 347 --radius 3
+mechcurve verify RUN
 ```
 
-### 分析自己的实验
+也可以直接交代给 Agent：“分析这个文件夹，按已知样品身份合并续测；列出每个样品最高达标周，并指出拉断判定能追溯到哪些原始行。” 本地 MCP 服务支持同样的目录检查、分析和回查。[Agent 工具](docs/agent.md) · [可运行的样品备注](examples/demo/notes.json)
 
-| 输入 | 输出 |
-| --- | --- |
-| 含时间、载荷或应力通道的 CSV，可选应变、位移和 Bluehill 配套文件 | 归一化单位、峰值、加载阶段和原始行号 |
-| 完整加载与卸载记录 | 逐周回线、峰值力及对应应力应变、换向点、卸载端点、总应变、可恢复和残余应变 |
-| 同一试样的身份与采集顺序 | 一页合并历史、连续周次编号、各段实测应变参考点 |
-| 拉伸过程和可用的断裂依据 | 首加载弹性模量、满足取值条件的拉伸性能、终止区间判读图 |
-| 含初始试运行的批次 | 正式样品出图、试运行判定理由、可回查的试运行逐点和逐周记录 |
+### 从试验台读回曲线
 
-使用 `mechcurve analyze INPUT_FOLDER --notes NOTES.json --output OUTPUT_FOLDER --lang zh`。结果放在输入目录之外。报告包含首加载 0.05%–0.15% 窗口的点数、拟合质量及原始行号。完全可恢复按完整周卸载端点的有符号段内残余严格小于 0.03 个百分点判定。[指标定义与适用范围](docs/methods.md) · [可运行的备注示例](examples/demo/notes.json)
+| 标距基准 | 续测交界 | 断裂证据 |
+| --- | --- | --- |
+| [![引伸计标距测量示意](assets/gallery/03-gauge-preview.webp)](docs/methods.md) | [![同一试样两次采集示意](assets/gallery/09-resume-preview.webp)](assets/showcase/resumed-history.pdf) | [![断裂试样两端分离示意](assets/gallery/10-fracture-preview.webp)](assets/showcase/terminal-event.pdf) |
+| 核对原始应变参考点 | 保留同一目标的两次观测 | 对照载荷骤降前后的原始行 |
 
-### 接入 Agent
+封面和试验台插图为概念示意。上文的定量图全部由公开合成 CSV 计算生成。支持 CSV、TSV、TXT 和 Excel 可见工作表，也可分析压缩、弯曲、扭转、蠕变、松弛、疲劳等试验。[其他类型的十二页样张](assets/showcase/protocol-sheets.zh.pdf) · [试验类型与适用条件](docs/protocols.md) · [完整图册](docs/gallery.md)
 
-支持命令行的 Agent 可以直接调用 CLI。支持 MCP 的宿主可以启动本地 stdio 服务，执行目录发现、整批分析、按周查询、原始行查询及结果核验。数值计算在本机完成。Agent 写入补充解释时附采集记录与行号。重跑时分别校验并复用数值记录、采集段图、样品详报、样品单页和续测合并图。[配置方法及示例](docs/agent.md)
-
-### 复现与开发
-
-```sh
-python examples/generate_demo.py
-python -m pip install -e ".[agent,test]"
-python -m pytest -q
-```
-
-项目图册收录六种合成数据出图与十二张实验概念插图。[浏览图册和插图来源](docs/gallery.md) · [MIT 开源许可](LICENSE)
+基于已分析的公开轴向示例，可运行 `python examples/render_axial_guide.py RUN OUTPUT_FOLDER` 复现首页定量插图。中文报告使用本机中文字体，也可通过 `MECHCURVE_FONT` 指定字体文件。[中文批次报告](assets/showcase/campaign-report.zh.pdf) · [MIT 许可](LICENSE)

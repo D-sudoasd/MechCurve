@@ -84,11 +84,17 @@ def main():
         (i / 100, 580 * min(i / 100, 0.55) + 33 * max(i / 100 - 0.55, 0))
         for i in range(301)
     ]
-    write_record("tensile-c.csv", tensile + [(3.01, 2.5), (3.02, 1.5)], 3.2, 30)
+    # A distinct measured stress maximum, softening branch and three-step terminal fall.
+    peak = tensile[-1][1]
+    tensile.extend((3 + i / 100, peak - 1.6 * i) for i in range(1, 46))
+    tensile.extend([(3.46, 244), (3.47, 152), (3.48, 32), (3.49, 2.5), (3.50, 1.5)])
+    write_record("tensile-c.csv", tensile, 3.2, 30)
     notes["records"]["tensile-c.csv"] = {
         "sample": "Tensile C",
         "history": "tension",
         "fractured": True,
+        "original_gauge_mm": 30,
+        "final_gauge_mm": 30.87,
     }
     (DESTINATION / "notes.json").write_text(
         json.dumps(notes, indent=2) + "\n", encoding="utf-8", newline="\n"
